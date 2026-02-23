@@ -10,7 +10,7 @@ As an alternative to [torchprime](https://github.com/AI-Hypercomputer/torchprime
 - ease-of-use
 - research scale training (1b-10b parameters)
 
-This repo 
+*This repo is a work in progress, with plans to improve documentation and create more example implementations*.
 
 ## Features
 
