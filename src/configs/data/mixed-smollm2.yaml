@@ -1,0 +1,24 @@
+
+dataset:
+
+    url: aklein4/seq2seq-mixed-pretraining-SmolLM2
+    
+    kwargs:
+
+        split: train
+        name: all
+
+        streaming: true
+
+
+collator:
+
+    type: seq_to_seq.SeqToSeqCollator
+
+    kwargs:
+
+        input_length: 256
+        output_length: 512
+        
+        pad_token_id: 49152
+    

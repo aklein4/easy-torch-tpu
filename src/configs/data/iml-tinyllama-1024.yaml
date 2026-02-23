@@ -1,0 +1,21 @@
+
+dataset:
+
+    url: aklein4/fineweb-w-edu-tinyllama
+    
+    kwargs:
+
+        split: train
+        name: length_1024
+
+        streaming: true
+
+
+collator:
+
+    type: iml.IMLCollator
+
+    kwargs:
+    
+        iml_test_fraction: 5
+    

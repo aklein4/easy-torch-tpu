@@ -1,0 +1,260 @@
+import math
+from typing import Any
+
+import torch
+from torch import nn
+
+from utils import constants
+if constants.XLA_AVAILABLE:
+  import torch_xla.debug.profiler as xp
+  import torch_xla.distributed.spmd as xs
+  from torch_xla.experimental.custom_kernel import FlashAttention, flash_attention
+  from torch_xla.experimental.splash_attention import (
+    SplashAttentionConfig,
+    splash_attention,
+  )
+  import torchprime.utils.kernel_utils as kernel_utils
+  import torchprime.utils.parallelism_utils as parallelism_utils
+else:
+  try:
+    from flash_attn import flash_attn_func
+  except ImportError:
+    flash_attn_func = None
+
+
+if constants.XLA_AVAILABLE:
+
+  class NanSafeFlashAttention(FlashAttention):
+
+    def forward(*args):
+      output = FlashAttention.forward(*args)
+      return torch.nan_to_num(output, nan=0.0, posinf=0.0, neginf=0.0)
+
+    def backward(*args):
+      output = FlashAttention.backward(*args)
+      return tuple(
+        None if o is None else torch.nan_to_num(o, nan=0.0, posinf=0.0, neginf=0.0)
+        for o in output
+      )
+
+  def nan_safe_flash_attention(
+      q,  # [batch_size, num_heads, q_seq_len, d_model]
+      k,  # [batch_size, num_heads, kv_seq_len, d_model]
+      v,  # [batch_size, num_heads, kv_seq_len, d_model]
+      causal=False,
+      q_segment_ids=None,  # [batch_size, q_seq_len]
+      kv_segment_ids=None,  # [batch_size, kv_seq_len]
+      sm_scale=1.0,
+      *,
+      ab=None,  # [batch_size, num_heads, q_seq_len, kv_seq_len]
+      partition_spec=None,
+      mesh=None,
+  ):
+    return NanSafeFlashAttention.apply(q, k, v, causal, q_segment_ids, kv_segment_ids,
+      sm_scale, ab, partition_spec, mesh)
+
+
+def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
+  """
+  This is the equivalent of torch.repeat_interleave(x, dim=1, repeats=n_rep). The hidden states go from (batch,
+  num_key_value_heads, seqlen, head_dim) to (batch, num_attention_heads, seqlen, head_dim)
+  """
+  batch, num_key_value_heads, slen, head_dim = hidden_states.shape
+  if n_rep == 1:
+    return hidden_states
+  hidden_states = hidden_states[:, :, None, :, :].expand(
+    batch, num_key_value_heads, n_rep, slen, head_dim
+  )
+  return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
+
+
+class AttentionModule(nn.Module):
+  def __init__(self, config, kernel_config: dict[str, Any] | None = None, is_causal: bool = True):
+    super().__init__()
+    self.config = config
+    self.kernel_config = kernel_config
+    self.is_causal = is_causal
+
+  # @xp.trace_me("AttentionModule")
+  def forward(
+    self,
+    query_states: torch.Tensor,  # (batch_size, num_heads, q_len, head_dim)
+    key_states: torch.Tensor,  # (batch_size, num_kv_heads, kv_len, head_dim)
+    value_states: torch.Tensor,  # (batch_size, num_kv_heads, kv_len, head_dim)
+    attention_mask: torch.Tensor | None = None, # only used in non-kernel attention
+    attention_probe = None,
+  ):
+    if self.config.attention_kernel != "splash_attention":
+      num_key_value_groups = (
+        query_states.shape[1] // key_states.shape[1]
+      )
+      key_states = repeat_kv(key_states, num_key_value_groups)
+      value_states = repeat_kv(value_states, num_key_value_groups)
+
+    bsz, num_heads, q_len, head_dim = query_states.size()
+    # TODO: q, k dim unintentionally changed after the apply_rotary_pos_emb. Use
+    # v's dim temporarily to bypass shape assertion failure. Remove the
+    # following line after resolving
+    # https://github.com/AI-Hypercomputer/torchprime/issues/195.
+    head_dim = value_states.shape[-1]
+
+    kv_seq_len = key_states.shape[-2]
+
+    # Non FA path doesn't deal with 2D sharding.
+    self.partition_spec = None
+    segment_ids_partition_spec = None
+    if constants.XLA_AVAILABLE and xs.get_global_mesh() is not None:
+      self.partition_spec = (("data", "fsdp"), "tensor", None, None)
+      segment_ids_partition_spec = (("data", "fsdp"), None)
+
+    match self.config.attention_kernel:
+      case "splash_attention":
+        assert constants.XLA_AVAILABLE, "Splash Attention requires XLA"
+        # Integrated with PyTorch/XLA Pallas Splash Attention:
+        assert xs.get_global_mesh() is not None, (
+          "Global mesh is required for Splash Attention"
+        )
+        if "load_balance_cp" in self.config and self.config.load_balance_cp:
+          cp_size = self.config.context
+          # when CP and lbcp is enabled, we need to unpermute the kv in each attention layer
+          key_states = parallelism_utils.reorder_sequence(
+            tensor=key_states,
+            cp_size=cp_size,
+            seq_dim=2,
+            to_contiguous=True,
+          )
+          value_states = parallelism_utils.reorder_sequence(
+            tensor=value_states,
+            cp_size=cp_size,
+            seq_dim=2,
+            to_contiguous=True,
+          )
+          # Need to unpermute decoder_segment_ids when decoder
+          # segment ids is supported in torchprime
+          q_len = query_states.shape[2]
+          mask_shape = (q_len, q_len)
+          custom_mask = parallelism_utils.LoadBalancedCausalMask(
+            shape=mask_shape, cp_size=cp_size
+          )
+
+        sa_config = SplashAttentionConfig(
+          mesh=str(xs.get_global_mesh()),
+          qkv_partition_spec=self.partition_spec,
+          segment_ids_partition_spec=segment_ids_partition_spec,
+        )
+        if self.kernel_config is not None:
+          for key, value in self.kernel_config.items():
+            if hasattr(sa_config, key):
+              setattr(sa_config, key, value)
+        query_states /= math.sqrt(head_dim)
+
+        if "load_balance_cp" in self.config and self.config.load_balance_cp:
+          attn_output = kernel_utils.tpu_splash_attention_jax_call_wrapper(
+            mask=custom_mask,
+            query=query_states,
+            key=key_states,
+            value=value_states,
+            config=sa_config.to_json(),
+            decoder_segment_ids=None,
+            causal=self.is_causal,
+            q_seq_shards=cp_size,
+          )[0]
+        else:
+          attn_output = splash_attention(
+            query_states, key_states, value_states, sa_config.to_json()
+          )
+      case "flash_attention" | "nan_safe_flash_attention":
+        assert constants.XLA_AVAILABLE, "Flash Attention requires XLA"
+        # Integrated with PyTorch/XLA Pallas Flash Attention:
+        default_block_sizes = {
+          "block_q": 512, # 2048,
+          "block_k_major": 512,
+          "block_k": 512,
+          "block_b": 2,
+          "block_q_major_dkv": 512, # 2048,
+          "block_k_major_dkv": 512,
+          "block_q_dkv": 512, # 2048,
+          "block_k_dkv": 512,
+          "block_q_dq": 512, # 2048,
+          "block_k_dq": 256,
+          "block_k_major_dq": 512,
+        }
+        if self.kernel_config is not None:
+          default_block_sizes.update(self.kernel_config)
+        FlashAttention.DEFAULT_BLOCK_SIZES = default_block_sizes
+
+        def _pad(x, l):
+          if x.shape[-2] % l != 0:
+            return torch.cat(
+              [x, torch.zeros_like(x[:, :, :(l - (x.shape[-2] % l)), :])],
+              dim=-2
+            )
+          return x
+
+        og_len = query_states.shape[-2]
+        query_states = _pad(query_states, 512)
+        key_states = _pad(key_states, 512)
+        value_states = _pad(value_states, 512)
+
+        query_states = query_states / math.sqrt(head_dim)
+        if self.config.attention_kernel == "flash_attention":
+          attn_output = flash_attention(
+            query_states,
+            key_states,
+            value_states,
+            causal=self.is_causal,
+            partition_spec=self.partition_spec,
+          )
+        else:
+          attn_output = nan_safe_flash_attention(
+            query_states,
+            key_states,
+            value_states,
+            causal=self.is_causal,
+            partition_spec=self.partition_spec,
+          )
+        attn_output = attn_output[:, :, :og_len, :]
+
+      case "gpu_flash_attention":
+        assert flash_attn_func is not None, (
+          "flash_attn package is required for GPU Flash Attention"
+        )
+
+        attn_output = flash_attn_func(
+          query_states.transpose(1, 2).to(torch.bfloat16),  # [B, q_len, num_heads, head_dim]
+          key_states.transpose(1, 2).to(torch.bfloat16),    # [B, kv_len, num_heads, head_dim]
+          value_states.transpose(1, 2).to(torch.bfloat16),  # [B, kv_len, num_heads, head_dim]
+          causal=self.is_causal,
+        ).transpose(1, 2).to(query_states.dtype)  # [B, num_heads, q_len, head_dim]
+
+      case _:
+        attn_weights = torch.matmul(
+          query_states, key_states.transpose(2, 3)
+        ) / math.sqrt(head_dim)
+        attn_weights = attn_weights.to(torch.float32)
+        if attn_weights.size() != (bsz, num_heads, q_len, kv_seq_len):
+          raise ValueError(
+            f"Attention weights should be of size {(bsz, num_heads, q_len, kv_seq_len)}, but is"
+            f" {attn_weights.size()}"
+          )
+        if attention_mask is not None:  # no matter the length, we just slice it
+          causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
+          attn_weights = attn_weights + causal_mask.to(attn_weights.dtype)
+        # upcast attention to fp32
+        attn_weights = nn.functional.softmax(
+          attn_weights, dim=-1, dtype=torch.float32
+        ).to(query_states.dtype)
+        attn_weights = nn.functional.dropout(
+          attn_weights, p=self.config.attention_dropout, training=self.training
+        )
+        attn_output = torch.matmul(attn_weights, value_states)
+
+        if attention_probe is not None:
+          attn_weights = attention_probe(attn_weights)
+
+    if attn_output.size() != (bsz, num_heads, q_len, head_dim):
+      raise ValueError(
+        f"`attn_output` should be of size {(bsz, num_heads, q_len, head_dim)}, but is"
+        f" {attn_output.size()}"
+      )
+    return attn_output

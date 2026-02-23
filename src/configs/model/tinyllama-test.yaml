@@ -1,0 +1,51 @@
+defaults:
+  - _self_  # refers to this config file
+  - sharding: llama-fsdp  # refers to sharding/llama-fsdp.yaml
+  - remat: llama-scan-offload  # refers to remat/llama-scan.yaml
+
+
+# Used to import the model from this class
+type: llama.LlamaForCausalLM 
+
+# Information about loading from a checkpoint
+pretrained_url: null
+pretrained_step: 0
+pretrained_strict: false
+
+# torch information
+torch_dtype: float32
+
+# vocab information
+vocab_size: 32000
+bos_token_id: 1
+eos_token_id: 2
+pad_token_id: 32000
+
+# architecture size
+hidden_size: 128
+num_hidden_layers: 3
+
+# attention configuration
+num_attention_heads: 2
+num_key_value_heads: 1
+
+# MLP configuration
+intermediate_size: 256
+hidden_act: silu
+
+# rope configuration
+max_position_embeddings: 2048
+rope_theta: 100000
+
+# misc
+attention_dropout: false
+attention_bias: false
+initializer_range: 0.02
+rms_norm_eps: 1.0e-05
+
+# value added to pad token attention scores
+# only used when elementwise_pad_mask is passed
+pad_attention_bias_value: -100.0
+
+# choose attention_kernel from: [flash_attention, splash_attention, null]
+attention_kernel: null
