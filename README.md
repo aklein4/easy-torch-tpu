@@ -1,6 +1,7 @@
+# easy-torch-tpu
+
 ![A banner image showing a TPU board with tensors expanding from it.](./assets/readme_header_image.png)
 
-# easy-torch-tpu
 A flexible framework for training custom research-scale models on Google's TPUs using torch-xla.
 
 Based on [torchprime](https://github.com/AI-Hypercomputer/torchprime) and integrated with Weights & Biases and Huggingface.
