@@ -4,7 +4,7 @@ type: lm_trainer.LMTrainer  # Used to import the trainer from this class
 
 
 # total batch size across all devices
-global_batch_size: 32
+global_batch_size: 64
 
 # run for N steps
 max_steps: 1000000 
@@ -34,10 +34,20 @@ optimizer:
 # Learning rate scheduler configuration
 lr_scheduler:
 
-  type: linear
+  type: warmup_stable_decay
 
-  warmup_steps: 100
-  training_steps: 1000000
+  # get_scheduler requires this outside of kwargs
+  num_warmup_steps: 1000
+
+  kwargs:
+
+    num_stable_steps: 1000000
+    num_decay_steps: 5000
+
+    min_lr_ratio: 0.0
+
+    warmup_type: linear
+    decay_type: linear
   
 
 # Defaults to clip the L2 norm of gradients to 1.0.
