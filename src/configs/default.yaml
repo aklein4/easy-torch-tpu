@@ -10,19 +10,22 @@ defaults:
   - trainer: lm-test
 
 
-# compute configuration
+# PRNG random seed
 seed: 42
 
-torch_dtype: float32 # must be float32 for now?
+# the default dtype, should be float32 for now
+torch_dtype: float32
+# The precision to use for matrix multiplications.
+# See https://docs.pytorch.org/xla/master/tutorials/precision_tutorial.html
 matmul_precision: default # [default, high, highest]
 
 
-# logging and saving configuration
+# if true, disable logging to W&B and checkpoint saving
 debug: false
 
-project: tpu-testing
-name: test
-
+# Information about the W&B run where metrics will be logged.
+project: easy-torch-tpu
+name: default-run
 notes: null
 
 
@@ -34,7 +37,7 @@ ici_mesh:
   fsdp: 8
   tensor: 1
   expert: 1
-  context: 1
+  context: 1 # context parallelism may not work at this time
 
 
 # Shape of the logical mesh where each element is a TPU slice. This is called
@@ -49,7 +52,7 @@ dcn_mesh:
   fsdp: 1
   tensor: 1
   expert: 1
-  context: 1
+  context: 1 # context parallelism may not work at this time
 
 
 # These are default values for model activation rematerialization configuration.

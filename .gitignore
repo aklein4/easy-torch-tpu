@@ -1,4 +1,6 @@
 
+*.env
+
 local_data/
 
 outputs/

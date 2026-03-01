@@ -1,21 +1,36 @@
+import torch
 
 import utils.constants as constants
 if constants.XLA_AVAILABLE:
-
     import torch_xla.distributed.spmd as xs
 
-    from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
 
-
-def master_print(*args, flush=True, **kwargs):
+def master_print(
+    *args,
+    flush: bool=True,
+    **kwargs
+) -> None:
+    """
+    Print only if this is the main process or XLA is not available.
+    """
     if not constants.XLA_AVAILABLE or constants.PROCESS_IS_MAIN():
         print(*args, flush=flush, **kwargs)
 
 
-def print_sharding_info(tensor, name=None):
+def print_sharding_info(
+    x: "torch.Tensor",
+    name: str = None,
+) -> None:
+    """
+    Print the sharding information of a tensor. Only prints on the main process of each device.
+
+    Args:
+        x (torch.Tensor): The tensor to print sharding info for.
+        name (str, optional): An optional name to identify the tensor in the printout.
+    """
     
     if constants.XLA_AVAILABLE:
-        xt = xs.wrap_if_sharded(tensor)
+        xt = xs.wrap_if_sharded(x)
 
         master_print(f" ===== Sharding info for {name if name else 'tensor'} ===== ")
         master_print(f" - Shape: {xt.shape}")
@@ -26,22 +41,3 @@ def print_sharding_info(tensor, name=None):
 
     else:
         raise RuntimeError("Cannot print sharding info. XLA is not available.")
-
-
-def visualize_sharding_info(tensor, name=None):
-
-    if constants.XLA_AVAILABLE:
-        xt = xs.wrap_if_sharded(tensor)
-
-        master_print(f" ===== Sharding info for {name if name else 'tensor'} ===== ")
-        master_print(f" - Shape: {xt.shape}")
-        if isinstance(xt, xs.XLAShardedTensor):
-            table = visualize_tensor_sharding(xt)
-            master_print(table)
-            master_print("")
-        else:
-            master_print(" - Not sharded\n")
-
-    else:
-        raise RuntimeError("Cannot visualize sharding info. XLA is not available.")
-    

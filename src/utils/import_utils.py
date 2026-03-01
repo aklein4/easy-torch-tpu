@@ -14,6 +14,8 @@ def import_class(
     Args:
         path (str): The full path to the class, e.g. 'module.submodule.ClassName'.
         *args: Additional module path components to prepend, e.g. [supersupermodule, supermodule, ...].
+    Returns:
+        type: The imported class.
     """
 
     # split into module and class name

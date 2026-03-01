@@ -2,6 +2,28 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+"""
+A collection of PyTorch utility functions that might be useful.
+"""
+
+
+def scale_gradient(
+    x: torch.Tensor,
+    scale: torch.Tensor | float | dict
+) -> torch.Tensor:
+    """
+    Scales the gradient flowing through x by the given scale factor.
+
+    If scale is a dict, it should have a "value" key containing the actual scale factor once the backward pass is executed.
+    However, it can be empty during the forward pass, which allows you to set the scale factor after the forward pass is complete.
+    
+    Args:
+        x (torch.Tensor): Input tensor.
+        scale (torch.Tensor | float | dict): Scale factor for the gradient.
+    Returns:
+        torch.Tensor: Tensor with the same data as x, but with the gradient scaled by scale during backpropagation.
+    """
+    return _ScaleGradient.apply(x, scale)
 
 class _ScaleGradient(torch.autograd.Function):
 
@@ -26,19 +48,23 @@ class _ScaleGradient(torch.autograd.Function):
 
         return grad_output * scale, None
 
-def scale_gradient(
-    x: torch.Tensor,
-    scale: torch.Tensor | float | dict
+
+
+def attach_gradient(
+    real: torch.Tensor,
+    ghost: torch.Tensor,
 ) -> torch.Tensor:
     """
-    Scales the gradient flowing through x by the given scale factor.
+    Attaches the gradient of `ghost` to `real` during backpropagation, so that
+    `ghost` will also receive the same gradient as `real` during backpropagation.
 
     Args:
-        x (torch.Tensor): Input tensor.
-        scale (torch.Tensor | float | dict): Scale factor for the gradient.
+        real (torch.Tensor): The tensor whose value is used in the forward pass.
+        ghost (torch.Tensor): The tensor which also recieves the gradient during backpropagation.
+    Returns:
+        torch.Tensor: Tensor with the same data as real, but with the gradient of ghost attached during backpropagation.
     """
-    return _ScaleGradient.apply(x, scale)
-
+    return _AttachGradient.apply(real, ghost)
 
 class _AttachGradient(torch.autograd.Function):
 
@@ -51,19 +77,22 @@ class _AttachGradient(torch.autograd.Function):
         return grad_output, grad_output
 
 
-def attach_gradient(
-    real: torch.Tensor,
-    ghost: torch.Tensor,
+def print_gradient(
+    x: torch.Tensor,
+    name: str | None = None,
 ) -> torch.Tensor:
     """
-    Attaches the gradient of `ghost` to `real` during backpropagation.
-
+    Print the gradient flowing through x during backpropagation.
+    
+    If name is provided, it will be printed before the gradient for easier identification.
+    
     Args:
-        real (torch.Tensor): The tensor whose value is used in the forward pass.
-        ghost (torch.Tensor): The tensor who also recieves the gradient during backpropagation.
+        x (torch.Tensor): Input tensor.
+        name (str | None): Optional name to identify the gradient.
+    Returns:
+        torch.Tensor: Tensor with the same data as x, but with the gradient printed during backpropagation.
     """
-    return _AttachGradient.apply(real, ghost)
-
+    return _PrintGradient.apply(x, name)
 
 class _PrintGradient(torch.autograd.Function):
 
@@ -76,16 +105,32 @@ class _PrintGradient(torch.autograd.Function):
     def backward(ctx, grad_output):
 
         if ctx.name is not None:
-            print(f"Gradient of {ctx.name}:")
+            print(f"Gradient of {ctx.name}:", flush=True)
         else:
-            print("Gradient:")
-        print(grad_output)
+            print("Gradient:", flush=True)
+        print(grad_output, flush=True)
         
         return grad_output, None
 
-def print_gradient(x, name=None):
-    return _PrintGradient.apply(x, name)
 
+def transform_gradient(
+    x: torch.Tensor,
+    fn: callable,
+    fn_kwargs: dict={},
+) -> torch.Tensor:
+    """
+    Applies a transformation function to the gradient flowing through x.
+
+    fn should have the signature: fn(x, grad_output, **fn_kwargs) -> transformed_grad_output
+    
+    Args:
+        x (torch.Tensor): Input tensor.
+        fn (callable): Function to transform the gradient.
+        fn_kwargs (dict): Additional keyword arguments for the function.
+    Returns:
+        torch.Tensor: Tensor with the same data as x, but with the gradient transformed by fn during backpropagation.
+    """
+    return _TransformGradient.apply(x, fn, fn_kwargs)
 
 class _TransformGradient(torch.autograd.Function):
 
@@ -106,30 +151,43 @@ class _TransformGradient(torch.autograd.Function):
 
         return grad_output, None, None
 
-def transform_gradient(
+
+def unsqueeze_to_batch(
     x: torch.Tensor,
-    fn: callable,
-    fn_kwargs: dict={},
+    target: torch.Tensor
 ) -> torch.Tensor:
     """
-    Applies a transformation function to the gradient flowing through x.
+    Add leading dimensions to x (out-of-place) until it has the same number of dimensions as target.
 
     Args:
-        x (torch.Tensor): Input tensor.
-        fn (callable): Function to transform the gradient.
-        fn_kwargs (dict): Additional keyword arguments for the function.
+        x (torch.Tensor): Input tensor to be unsqueezed.
+        target (torch.Tensor): Target tensor whose number of dimensions we want to match.
+    Returns:
+        torch.Tensor: Tensor with the same data as x, but with leading dimensions added.
     """
-    return _TransformGradient.apply(x, fn, fn_kwargs)
 
-
-def unsqueeze_to_batch(x, target):
     while x.dim() < target.dim():
         x = x[None]
 
     return x
 
 
-def expand_to_batch(x, target):
+def expand_to_batch(
+    x: torch.Tensor,
+    target: torch.Tensor
+) -> torch.Tensor:
+    """
+    Add leading dimensions to x (out-of-place) until it has the same number of dimensions as target.
+    Then expand those leading dimensions to match the corresponding dimensions of target.
+
+    Existing dimensions of x are not changed.
+
+    Args:
+        x (torch.Tensor): Input tensor to be expanded.
+        target (torch.Tensor): Target tensor whose number of dimensions and leading dimension sizes we want to match.
+    Returns:
+        torch.Tensor: Tensor with the same data as x, but with leading dimensions added and expanded.
+    """
     og_shape = x.shape
 
     num_unsqueeze = 0
@@ -144,14 +202,42 @@ def expand_to_batch(x, target):
     return x
 
 
-def unsqueeze_to_channel(x, target):
+def unsqueeze_to_channel(
+    x: torch.Tensor,
+    target: torch.Tensor
+) -> torch.Tensor:
+    """
+    Add trailing dimensions to x (out-of-place) until it has the same number of dimensions as target.
+
+    Args:
+        x (torch.Tensor): Input tensor to be unsqueezed.
+        target (torch.Tensor): Target tensor whose number of dimensions we want to match.
+    Returns:
+        torch.Tensor: Tensor with the same data as x, but with trailing dimensions added.
+    """
+
     while x.dim() < target.dim():
         x = x[..., None]
 
     return x
 
 
-def expand_to_channel(x, target):
+def expand_to_channel(
+    x: torch.Tensor,
+    target: torch.Tensor
+) -> torch.Tensor:
+    """
+    Add trailing dimensions to x (out-of-place) until it has the same number of dimensions as target.
+    Then expand those trailing dimensions to match the corresponding dimensions of target.
+
+    Existing dimensions of x are not changed.
+
+    Args:
+        x (torch.Tensor): Input tensor to be expanded.
+        target (torch.Tensor): Target tensor whose number of dimensions and trailing dimension sizes we want to match.
+    Returns:
+        torch.Tensor: Tensor with the same data as x, but with trailing dimensions added and expanded.
+    """
     og_shape = x.shape
 
     num_unsqueeze = 0
@@ -166,60 +252,24 @@ def expand_to_channel(x, target):
     return x
 
 
-def safe_copy_state(src, dst, strict=True):
+def safe_copy_state(
+    src: nn.Module,
+    dst: nn.Module,
+    strict: bool = True,
+) -> None:
+    """
+    Copy the state dict from src to dst, safely cloning and detaching every tensor.
+    
+    dst is modified in-place, and nothing is returned.
+
+    Args:
+        src (nn.Module): Source module to copy state from.
+        dst (nn.Module): Destination module to copy state to.
+        strict (bool): Whether to strictly enforce that the keys in src and dst match.
+    """
 
     state = {
         k: v.clone().detach() for k, v in src.state_dict().items()
     }
 
     dst.load_state_dict(state, strict=strict)
-
-
-def shift(
-    x: torch.Tensor,
-    n: int,
-    dim: int,
-    direction: str,
-    narrow: bool,
-):
-
-    zero_shape = list(x.shape)
-    zero_shape[dim] = n
-    z = torch.zeros(*zero_shape, device=x.device, dtype=x.dtype)
-
-    if direction == 'right':
-        if narrow:
-            x = torch.narrow(x, dim, 0, x.shape[dim] - n)
-        
-        l = [z, x]
-
-    elif direction == 'left':
-        if narrow:
-            x = torch.narrow(x, dim, n, x.shape[dim] - n)
-        
-        l = [x, z]
-
-    else:
-        raise ValueError(f"Invalid direction: {direction}")
-    
-    return torch.cat(l, dim=dim)
-
-
-def gaussian_init(module: nn.Module):
-
-    if isinstance(module, nn.Linear):
-        module.weight.data.normal_(mean=0.0, std=1/module.in_features**0.5)
-        if module.bias is not None:
-            module.bias.data.zero_()
-
-    elif isinstance(module, nn.Embedding):
-        module.weight.data.normal_(mean=0.0, std=1)
-
-
-def safe_repeat(
-    x: torch.Tensor, n_repeats: int, dim: int=0
-) -> torch.Tensor:
-    return torch.cat(
-        [x] * n_repeats,
-        dim=dim
-    )

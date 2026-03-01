@@ -47,7 +47,7 @@ def lm_acc_fn(
     shift_logits: bool = True,
     shift_labels: bool = True,
 ) -> torch.FloatTensor:
-    """ Compute language modeling accuacy.
+    """ Compute language modeling accuracy.
 
     Args:
         logits (torch.FloatTensor): model output logits of shape (B, T, V)

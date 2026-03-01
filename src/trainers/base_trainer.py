@@ -2,12 +2,7 @@
 
 This script provides a `Trainer` class that sets up model sharding, activation checkpointing,
 optimization, and the training loop with XLA-specific configurations. It is designed to work with
-distributed TPU training and includes utilities for metrics logging and MFU computation.
-
-Typical usage example:
-
-    trainer = Trainer(model, config, train_dataset)
-    trainer.train_loop(metrics_logger)
+distributed TPU training.
 """
 
 import logging
@@ -16,7 +11,6 @@ import os
 from timeit import default_timer as timer
 import shutil
 import json
-import numpy as np
 import re
 import time
 
@@ -48,7 +42,6 @@ from torchprime.utils.parallelism_utils import lb_cp_enabled, reorder_sequence
 import wandb
 import huggingface_hub as hf
 
-from models.xla import BaseXLAModel
 from utils.import_utils import import_optimizer, import_collator
 from utils import constants
 from utils.remat_utils import advanced_remat
@@ -63,7 +56,7 @@ class BaseTrainer:
 
     This class encapsulates model preparation, optimizer configuration, data loading,
     and the training loop. It is designed to handle distributed training across TPU cores,
-    enabling features like SPMD sharding, activation checkpointing, and profiling.
+    enabling features like SPMD sharding, and activation checkpointing.
 
     Args:
         model: The model to train.
@@ -75,7 +68,7 @@ class BaseTrainer:
 
     def __init__(
         self,
-        model: BaseXLAModel,
+        model: torch.nn.Module,
         config: DictConfig,
         train_dataset: Dataset | IterableDataset,
     ):

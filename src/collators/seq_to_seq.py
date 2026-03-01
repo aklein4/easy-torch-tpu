@@ -61,7 +61,7 @@ def handle_ids(batch, key, sequence_length, pad_token_id):
     )
     input_ids = input_ids[:, :sequence_length]
     
-    # pad to sequence length
+    # extend to sequence length
     pad = torch.full(
         (input_ids.shape[0], sequence_length - input_ids.shape[1]),
         pad_token_id,

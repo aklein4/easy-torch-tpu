@@ -4,17 +4,7 @@ import io
 import numpy as np
 
 
-def load_any_array(
-    x: list | np.ndarray | torch.Tensor
-) -> torch.Tensor:
-    """
-    Load an array from a list, numpy array, or torch tensor and convert it to a torch tensor if necessary.
-
-    Args:
-        x (list | np.ndarray | torch.Tensor): The input array to load.
-    Returns:
-        torch.Tensor: The loaded array as a torch tensor.
-    """
+def load_any_array(x) -> torch.Tensor:
 
     if isinstance(x, list):
         return torch.tensor(x)
@@ -35,7 +25,7 @@ def load_byte_array(
         - see npy_loads() in https://github.com/webdataset/webdataset/blob/main/webdataset/autodecode.py
     """
 
-    # depending on datasets versions, sometimes functions that call this will already be in a list?
+    # depending on datasets? versions, sometimes functions that call this will already be in a list?
     try:
         stream = io.BytesIO(data)
         out = np.lib.format.read_array(stream)
@@ -46,24 +36,23 @@ def load_byte_array(
 
 
 def get_hf_files(
-    url: str,
+    hf_id: str,
+    name: str,
     branch: str = "main",
-    splits: list = ["train", "val", "test"]
-) -> dict:
+):
     """ Get datafile urls for the given dataset name.
      - see example at https://huggingface.co/docs/hub/en/datasets-webdataset 
+     - see data_prep.token_wds for repo layout
      
     Args:
-        url (str): dataset url on huggingface hub
-        branch (str, optional): branch to load from. Defaults to "main".
-        splits (list, optional): list of splits to get urls for. Defaults to ["train", "val", "test"].
+        name (str): name of the repo to load
 
     Returns:
         Dict[str, str]: dict of splits and their urls
     """
     data_files = {}
-    for split in splits:
+    for split in ["train", "val", "test"]:
 
-        data_files[split] = f"https://huggingface.co/datasets/{url}/resolve/{branch}/{split}/*"
+        data_files[split] = f"https://huggingface.co/datasets/{hf_id}/{name}/resolve/{branch}/{split}/*"
     
     return data_files
