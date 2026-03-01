@@ -60,6 +60,7 @@ attention_kernel: flash_attention
 #   and the backward pass.
 #
 # Kernel attention implementations cannot be wrapped in a `PureModule`
-pure_modules:
- - LlamaMLP
- 
+#
+# Note: This is not currently supported for PyTorch/XLA 2.8.0
+pure_modules: []
+# - LlamaMLP

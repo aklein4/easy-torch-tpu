@@ -36,9 +36,9 @@ def mark_pure_modules(model: nn.Module, config: DictConfig) -> nn.Module:
     if torch_xla_version.startswith("2.7"):
       logger.warning("pure_modules is not supported for PyTorch/XLA 2.7.x")
       return model
-    # if torch_xla_version == "2.8.0":
-    #   logger.warning("pure_modules is not supported for PyTorch/XLA 2.8.0")
-    #   return model
+    if torch_xla_version == "2.8.0":
+      logger.warning("pure_modules is not supported for PyTorch/XLA 2.8.0")
+      return model
 
   pure_module_classes = get_classes_by_names(model, pure_module_config)
 
