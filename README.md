@@ -1,6 +1,13 @@
+<div align="center">
+
 # easy-torch-tpu
 
 ![A banner image showing a TPU board with tensors expanding from it.](./assets/readme_header_image.png)
+
+#### Flexible Training for PyTorch on Cloud TPU
+
+</div>
+<br /><br />
 
 A flexible framework for training custom research-scale models on Google's TPUs using torch-xla.
 
