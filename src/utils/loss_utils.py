@@ -11,7 +11,7 @@ IGNORE_INDEX = -100
 def lm_loss_fn(
     logits: torch.FloatTensor,
     labels: torch.LongTensor,
-    ignore_index: int = IGNORE_INDEX,
+    ignore_index: int | None = None,
     shift_logits: bool = True,
     shift_labels: bool = True,
 ) -> torch.FloatTensor:
@@ -33,6 +33,9 @@ def lm_loss_fn(
     if shift_labels:
         labels = labels[:, 1:]
 
+    if ignore_index is None:
+        ignore_index = IGNORE_INDEX
+
     return F.cross_entropy(
         logits.reshape(-1, logits.shape[-1]),
         labels.reshape(-1),
@@ -43,7 +46,7 @@ def lm_loss_fn(
 def lm_acc_fn(
     logits: torch.FloatTensor,
     labels: torch.LongTensor,
-    ignore_index: int = IGNORE_INDEX,
+    ignore_index: int | None = None,
     shift_logits: bool = True,
     shift_labels: bool = True,
 ) -> torch.FloatTensor:
@@ -64,6 +67,9 @@ def lm_acc_fn(
         logits = logits[:, :-1, :]
     if shift_labels:
         labels = labels[:, 1:]
+
+    if ignore_index is None:
+        ignore_index = IGNORE_INDEX
 
     mask = labels != ignore_index
 

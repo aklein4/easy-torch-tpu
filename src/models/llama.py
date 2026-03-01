@@ -265,7 +265,8 @@ class LlamaAttention(nn.Module):
 
 
 class LlamaDecoderLayer(nn.Module):
-    offload_name = "decoder_layer"
+
+    offload_name = "decoder_input"
     is_causal = True
     
 
