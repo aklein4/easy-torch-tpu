@@ -5,8 +5,8 @@
 # See these configs for more information about the expected structure of the model, dataset, and trainer configs.
 defaults:
   - _self_ # refers to this config file
-  - model: smollm2-test 
-  - data: mixed-smollm2
+  - model: tinyllama-test 
+  - data: fineweb-tinyllama-1024
   - trainer: lm-test
 
 
