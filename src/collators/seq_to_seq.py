@@ -10,7 +10,7 @@ class SeqToSeqCollator:
         pad_token_id: int,
     ):
         """
-        Collator for sequence-to-sequence tasks.
+        Collator for pre-tokenized sequence-to-sequence tasks, with truncation and right-padding to a fixed length.
 
         Args:
             input_length (int): The maximum length of the input sequences.

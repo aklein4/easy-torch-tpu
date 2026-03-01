@@ -4,7 +4,7 @@ This guide demonstrates how to shard models. Sharding is the task
 of taking a large model and distributing the weights, activations, and compute
 across multiple devices. It is also known as multi-dimensional parallelism.
 
-Since easy-torch-tpu uses the SPMD paradigm, consider familiarizing yourself with the
+Since torchprime uses the SPMD paradigm, consider familiarizing yourself with the
 [PyTorch/XLA SPMD user guide][spmd-guide] first.
 
 ## Single device model + sharding configs
@@ -15,7 +15,7 @@ model, it doesn't call any sharding/parallelism APIs in the code. This makes for
 a familiar experience for eager mode GPU users and is generally good software
 engineering practice.
 
-Instead, easy-torch-tpu shards the model by modifying its parameters and layers
+Instead, torchprime shards the model by modifying its parameters and layers
 according to configurations specified at run time. The logic is implemented in
 [`shard_model.py`][shard-model] and invoked from the [trainer][trainer]. Here is
 an example sharding configuration that implements the [FSDP (aka ZeRO-3)][fsdp]
@@ -26,7 +26,7 @@ https://github.com/AI-Hypercomputer/torchprime/blob/b123c0cc157c28f32a0f6588f19e
 
 
 > 📝 NOTE: Compared to the FSDP wrapper in PyTorch upstream that uses eager
-> collective operations, easy-torch-tpu stages out a computation graph corresponding
+> collective operations, torchprime stages out a computation graph corresponding
 > to the training step where specific nodes in the graph are annotated with
 > sharding constraints. The XLA compiler then propagates those constraints to all
 > nodes in the graph and inserts the appropriate collective operations

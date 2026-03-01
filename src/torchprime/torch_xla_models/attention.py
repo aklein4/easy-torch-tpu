@@ -22,52 +22,6 @@ else:
     flash_attn_func = None
 
 
-if constants.XLA_AVAILABLE:
-
-  class NanSafeFlashAttention(FlashAttention):
-
-    def forward(*args):
-      output = FlashAttention.forward(*args)
-      return torch.nan_to_num(output, nan=0.0, posinf=0.0, neginf=0.0)
-
-    def backward(*args):
-      output = FlashAttention.backward(*args)
-      return tuple(
-        None if o is None else torch.nan_to_num(o, nan=0.0, posinf=0.0, neginf=0.0)
-        for o in output
-      )
-
-  def nan_safe_flash_attention(
-      q,  # [batch_size, num_heads, q_seq_len, d_model]
-      k,  # [batch_size, num_heads, kv_seq_len, d_model]
-      v,  # [batch_size, num_heads, kv_seq_len, d_model]
-      causal=False,
-      q_segment_ids=None,  # [batch_size, q_seq_len]
-      kv_segment_ids=None,  # [batch_size, kv_seq_len]
-      sm_scale=1.0,
-      *,
-      ab=None,  # [batch_size, num_heads, q_seq_len, kv_seq_len]
-      partition_spec=None,
-      mesh=None,
-  ):
-    return NanSafeFlashAttention.apply(q, k, v, causal, q_segment_ids, kv_segment_ids,
-      sm_scale, ab, partition_spec, mesh)
-
-
-def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
-  """
-  This is the equivalent of torch.repeat_interleave(x, dim=1, repeats=n_rep). The hidden states go from (batch,
-  num_key_value_heads, seqlen, head_dim) to (batch, num_attention_heads, seqlen, head_dim)
-  """
-  batch, num_key_value_heads, slen, head_dim = hidden_states.shape
-  if n_rep == 1:
-    return hidden_states
-  hidden_states = hidden_states[:, :, None, :, :].expand(
-    batch, num_key_value_heads, n_rep, slen, head_dim
-  )
-  return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
-
-
 class AttentionModule(nn.Module):
   def __init__(self, config, kernel_config: dict[str, Any] | None = None, is_causal: bool = True):
     super().__init__()
@@ -191,6 +145,7 @@ class AttentionModule(nn.Module):
             )
           return x
 
+        # pad to block sizes if needed
         og_len = query_states.shape[-2]
         query_states = _pad(query_states, 512)
         key_states = _pad(key_states, 512)
@@ -258,3 +213,49 @@ class AttentionModule(nn.Module):
         f" {attn_output.size()}"
       )
     return attn_output
+
+
+def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
+  """
+  This is the equivalent of torch.repeat_interleave(x, dim=1, repeats=n_rep). The hidden states go from (batch,
+  num_key_value_heads, seqlen, head_dim) to (batch, num_attention_heads, seqlen, head_dim)
+  """
+  batch, num_key_value_heads, slen, head_dim = hidden_states.shape
+  if n_rep == 1:
+    return hidden_states
+  hidden_states = hidden_states[:, :, None, :, :].expand(
+    batch, num_key_value_heads, n_rep, slen, head_dim
+  )
+  return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
+
+
+if constants.XLA_AVAILABLE:
+
+  class NanSafeFlashAttention(FlashAttention):
+
+    def forward(*args):
+      output = FlashAttention.forward(*args)
+      return torch.nan_to_num(output, nan=0.0, posinf=0.0, neginf=0.0)
+
+    def backward(*args):
+      output = FlashAttention.backward(*args)
+      return tuple(
+        None if o is None else torch.nan_to_num(o, nan=0.0, posinf=0.0, neginf=0.0)
+        for o in output
+      )
+
+  def nan_safe_flash_attention(
+      q,  # [batch_size, num_heads, q_seq_len, d_model]
+      k,  # [batch_size, num_heads, kv_seq_len, d_model]
+      v,  # [batch_size, num_heads, kv_seq_len, d_model]
+      causal=False,
+      q_segment_ids=None,  # [batch_size, q_seq_len]
+      kv_segment_ids=None,  # [batch_size, kv_seq_len]
+      sm_scale=1.0,
+      *,
+      ab=None,  # [batch_size, num_heads, q_seq_len, kv_seq_len]
+      partition_spec=None,
+      mesh=None,
+  ):
+    return NanSafeFlashAttention.apply(q, k, v, causal, q_segment_ids, kv_segment_ids,
+      sm_scale, ab, partition_spec, mesh)

@@ -51,6 +51,10 @@ cd ~/easy-torch-tpu && . tpu_setup.sh <HF_ID> <HF_TOKEN> <WANDB_TOKEN>
 
 The [docs](./docs) folder contains useful information about configuration, training, and customization.
 
+## Contributing
+
+If you find a problem, have a suggestion, or want to contribute, open a GitHub issue.
+
 ## Acknowledgements
 
 Research supported with Cloud TPUs from Google's TPU Research Cloud (TRC).

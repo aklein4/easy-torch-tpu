@@ -300,6 +300,7 @@ class BaseTrainer:
         training_start_time = timer()
 
         # run the training loop
+        # TODO: enable multi-epoch training
         while step < max_step:
             try:
                 batch = next(train_iterator)
@@ -350,6 +351,7 @@ class BaseTrainer:
                     timer() - start_time  
                 ) / 3600 # in hours
 
+                # keep track of something like number of tokens trained on
                 if "atom_count" in aux.keys():
                     self.atoms_seen += aux["atom_count"].detach().item()
 
@@ -383,7 +385,7 @@ class BaseTrainer:
                 if "atom_count" in aux.keys():
                     to_wandb["atoms_seen"] = self.atoms_seen
 
-                to_wandb["nan"] = 1 - int(math.isfinite(loss))
+                to_wandb["loss_nan"] = 1 - int(math.isfinite(loss))
 
                 to_wandb["training_time_elapsed_hr"] = training_time_elapsed
                 to_wandb["avg_time_per_step_s"] = training_time_elapsed * 3600 / (step + 1)
@@ -430,7 +432,8 @@ class BaseTrainer:
         grad_norm = self.clip_gradients()
 
         opt_aux = self.optimizer.step()
-        aux.update(opt_aux)
+        if opt_aux is not None:
+            aux.update(opt_aux)
         self.model.zero_grad(set_to_none=False)
 
         lr = self.lr_scheduler.get_last_lr()[0]

@@ -10,6 +10,8 @@ Your class must contain a `forward` function that takes key-word arguments repre
 
 You can also override the `train_step(batch)` function which takes in the current training batch (as given by your collator), computes the loss using `forward`, and applies the gradient step. This function should return the loss, the aux dictionary, the gradient norm, and the learning rate.
 
+You can also implement a `post_init()` function that will be called after the base `__init__` function in order to implement custom initialization logic.
+
 Make sure that neither `forward` nor `train_step` contain operations that will break the XLA compilation graph, such as `print(Tensor)` and `Tensor.item()`.
 
 See [src/trainers/lm_trainer.py](../src/trainers/lm_trainer.py) for an example.
@@ -30,7 +32,7 @@ Model checkpoints that are saved during training can be loaded on a non-xla devi
 
 Custom optimizers can be created in the [src/optimizers/](../src/optimizers/) using the torch.optim.Optimizer class. Initialization arguments are passed from the trainer config.
 
-Your optimizer must implement a `step` function that returns a dictionary of single-element tensors and/or other objects to be logged.
+Your optimizer must implement a `step` function, which can return a dictionary of single-element tensors and/or other objects to be logged.
 
 See [optimizers/adamw.py](./src/optimizers/adamw.py) for an example.
 

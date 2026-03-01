@@ -1,26 +1,25 @@
 import torch
 
+import argparse
 import os
 
 import huggingface_hub as hf
 from transformers import AutoModelForCausalLM
 
 
-IN_URL = 'HuggingFaceTB/SmolLM2-1.7B'
-OUT_URL = 'aklein4/SmolLM2-1.7B-TPU'
-
 TMP_FILE = "tmp_model.pt"
 
-def main():
+
+def main(args):
     
-    model = AutoModelForCausalLM.from_pretrained(IN_URL)
+    model = AutoModelForCausalLM.from_pretrained(args.in_url, trust_remote_code=True)
     torch.save(
         model.state_dict(),
         TMP_FILE,
     )
 
     hf.create_repo(
-        OUT_URL,
+        args.out_url,
         private=False,
         exist_ok=True,
         repo_type="model",
@@ -30,7 +29,7 @@ def main():
     api.upload_file(
         path_or_fileobj=TMP_FILE,
         path_in_repo=f"{0:012d}/model.pt",
-        repo_id=OUT_URL,
+        repo_id=args.out_url,
         repo_type="model",
     )
 
@@ -38,4 +37,11 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+
+    parser = argparse.ArgumentParser(description="Convert HuggingFace model to checkpoint format compatible with easy-torch-tpu.")
+    parser.add_argument("--in_url", type=str, required=True, help="HuggingFace model URL to convert.")
+    parser.add_argument("--out_url", type=str, required=True, help="HuggingFace model URL to save converted model to.")
+    
+    args = parser.parse_args()
+
+    main(args)

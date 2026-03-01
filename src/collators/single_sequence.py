@@ -1,8 +1,4 @@
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-
-import numpy as np
 
 
 class SingleSequenceCollator:
@@ -13,7 +9,12 @@ class SingleSequenceCollator:
         pad_token_id: int,
         vocab_size: int,
     ):
+        """
+        A collator for pre-tokenized data without equal length, with truncation and right-padding to a fixed length.
+        """
+        
         self.sequence_length = sequence_length
+
         self.pad_token_id = pad_token_id
         self.vocab_size = vocab_size
 
