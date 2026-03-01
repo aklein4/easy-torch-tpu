@@ -8,12 +8,10 @@ defaults:
 # should contain the path within the model folder and the class name
 type: llama.LlamaForCausalLM
 
-# HuggingFace URL of the checkpoint to load, or null if initializing from scratch
-pretrained_url: null
-# Step of the checkpoint to load
-pretrained_step: null
-# Whether to strictly enforce that the keys in the checkpoint match the model state dict
-pretrained_strict: null
+# This checkpoint was created using scripts/convert_hf_checkpoint.py
+pretrained_url: aklein4/TinyLlama_v1.1_TPU
+pretrained_step: 0
+pretrained_strict: true
 
 # dtype of the model parameters. Should probably be float32
 torch_dtype: float32
@@ -22,23 +20,23 @@ torch_dtype: float32
 vocab_size: 32000
 bos_token_id: 1
 eos_token_id: 2
-pad_token_id: 32000
+pad_token_id: 32000 # not actually in the embeddings
 
 # architecture size
-hidden_size: 1024
-num_hidden_layers: 24
+hidden_size: 2048
+num_hidden_layers: 22
 
 # attention configuration
-num_attention_heads: 16
-num_key_value_heads: 8
+num_attention_heads: 32
+num_key_value_heads: 4
 
 # MLP configuration
-intermediate_size: 2560
+intermediate_size: 5632
 hidden_act: silu
 
 # rope configuration
-max_position_embeddings: 8192
-rope_theta: 100000
+max_position_embeddings: 2048
+rope_theta: 10000.0
 
 # initialization
 initializer_range: 0.02
