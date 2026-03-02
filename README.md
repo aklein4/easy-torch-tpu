@@ -2,8 +2,6 @@
 
 # easy-torch-tpu
 
-![A banner image showing a TPU board with tensors expanding from it.](./assets/readme_header_image.png)
-
 #### Flexible and Scalable Training with PyTorch on Cloud TPU
 
 </div>
