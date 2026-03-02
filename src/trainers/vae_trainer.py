@@ -48,7 +48,7 @@ class VAETrainer(BaseTrainer):
         )
 
         total_kl = torch.sum(
-            torch.log(sigma) + (sigma**2 + mu**2) / 2 - 0.5
+            -torch.log(sigma) + (sigma**2 + mu**2) / 2 - 0.5
         )
         num_tokens = (input_ids != pad_token_id).long().sum()
         kl_per_token = total_kl / num_tokens.float()
