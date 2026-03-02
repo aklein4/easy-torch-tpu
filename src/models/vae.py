@@ -83,10 +83,10 @@ class VAEModel(nn.Module):
         input_ids: torch.LongTensor,
     ) -> torch.FloatTensor:
         
-        input_embeds = self.embed_tokens(input_ids)
+        inputs_embeds = self.embed_tokens(input_ids)
 
         hidden_states = self.encoder_model(
-            input_embeds=input_embeds,
+            inputs_embeds=inputs_embeds,
         )
 
         # take the mean of the hidden states across the sequence dimension
