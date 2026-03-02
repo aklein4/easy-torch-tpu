@@ -2,7 +2,7 @@
 # vvvvvvvvvv Don't forget to change this for new experiments vvvvvvvvvv
 type: lm_trainer.LMTrainer  # Used to import the trainer from this class
 
-# This config approximates the hyperparameters of GPT-3 XL which had 1.3B parameters.
+# This config is similar to the hyperparameters of GPT-3 XL which had 1.3B parameters.
 # (assuming sequence lengths of 1024)
 
 # total batch size across all devices
@@ -38,7 +38,7 @@ lr_scheduler:
 
   # name of the scheduler
   # see  https://huggingface.co/docs/transformers/main/en/main_classes/optimizer_schedules#transformers.get_scheduler
-  type: cosine_warmup_with_min_lr
+  type: cosine_with_min_lr
 
   # get_scheduler requires this outside of kwargs
   num_warmup_steps: 375
@@ -46,7 +46,7 @@ lr_scheduler:
   # kwargs passed to the scheduler constructor
   kwargs:
 
-    num_training_steps: 260000
+    num_training_steps: 300000 # end of training unlike GPT-3 which decayed to 0 over 260B tokens
     
     min_lr_rate: 0.1
   

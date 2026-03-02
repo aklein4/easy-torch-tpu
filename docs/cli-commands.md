@@ -33,5 +33,5 @@ gcloud compute tpus tpu-vm ssh <NODE_ID> --worker=all --command='pkill python; p
 
 The [training script](../src/train.py) uses [Hydra](https://hydra.cc/docs/intro/) to manage configuration files and options. This allows you to overwrite training configuration from the command line when you launch a training run. Here is an example:
 ```
-python ~/easy-torch-tpu/src/train.py trainer=lm-medium model=tinyllama-medium trainer.global_batch_size=128
+python ~/easy-torch-tpu/src/train.py model=tinyllama-1.1b trainer=lm-xl data=fineweb-tinyllama-1024 ici_mesh.fsdp=16 trainer.optimizer.kwargs.weight_decay=0.01
 ```
