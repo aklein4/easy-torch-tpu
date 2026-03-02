@@ -174,6 +174,9 @@ class BaseTrainer:
             name=config.trainer.lr_scheduler.type,
             optimizer=optimizer,
             num_warmup_steps=config.trainer.lr_scheduler.num_warmup_steps,
+            num_training_steps=(
+                config.trainer.lr_scheduler.num_training_steps if "num_training_steps" in config.trainer.lr_scheduler else None
+            ),
             scheduler_specific_kwargs=config.trainer.lr_scheduler.kwargs,
         )
 
