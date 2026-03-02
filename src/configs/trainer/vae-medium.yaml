@@ -1,15 +1,15 @@
 
 # vvvvvvvvvv Don't forget to change this for new experiments vvvvvvvvvv
-type: lm_trainer.LMTrainer  # Used to import the trainer from this class
+type: vae_trainer.VAETrainer  # Used to import the trainer from this class
 
-# This config is similar to the hyperparameters of GPT-3 XL which had 1.3B parameters.
+# This config is similar to the hyperparameters of GPT-3 Medium which had 350M parameters.
 # (assuming sequence lengths of 1024)
 
 # total batch size across all devices
-global_batch_size: 1024
+global_batch_size: 512
 
 # run for N steps
-max_steps: 300000
+max_steps: 600000
 
 # Save a checkpoint every N steps
 checkpoint_interval: 10000
@@ -29,7 +29,7 @@ optimizer:
   # kwargs passed to the optimizer constructor
   kwargs:
 
-    lr: 2.0e-4
+    lr: 3.0e-4
 
     betas: [0.9, 0.95]
     
@@ -46,10 +46,10 @@ lr_scheduler:
   type: cosine_with_min_lr
 
   # get_scheduler requires this outside of kwargs
-  num_warmup_steps: 375
+  num_warmup_steps: 750
 
   # cosine scheduler requires this outside of kwargs
-  num_training_steps: 260000
+  num_training_steps: 520000
 
   # kwargs passed to the scheduler constructor
   kwargs:
@@ -67,3 +67,5 @@ max_grad_value: null
 
 # You can add any additional configuration options for your trainer here
 # They will appear as attributes of config.trainer
+
+kl_weight: 0.1

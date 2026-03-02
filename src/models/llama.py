@@ -414,11 +414,15 @@ class LlamaModel(nn.Module):
 
 
 class LlamaForCausalLM(nn.Module):
+    
+    transformer_type = LlamaModel
+
+    
     def __init__(self, config):
         super().__init__()
 
         self.config = config
-        self.model = LlamaModel(config)
+        self.model = self.transformer_type(config)
 
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
@@ -452,6 +456,7 @@ class LlamaForCausalLM(nn.Module):
     def forward(
         self,
         input_ids: torch.LongTensor,
+        inputs_embeds: torch.FloatTensor | None = None,
         labels: torch.LongTensor | None = None,
         attention_mask: torch.FloatTensor | None = None, # only used in non-kernel attention
         shift_states: bool = False,
@@ -459,6 +464,7 @@ class LlamaForCausalLM(nn.Module):
         """
         Args:
             input_ids (torch.LongTensor): Indices of input sequence tokens in the vocabulary. Shape `(batch_size, sequence_length)`.
+            inputs_embeds (torch.FloatTensor | None): Optionally, instead of passing `input_ids`, you can choose to directly pass an embedded
             labels (torch.LongTensor | None): Optional labels for computing the loss. Should be of shape `(batch_size, sequence_length)`. If `None`, loss will not be computed.
             attention_mask (torch.FloatTensor | None): Optional attention mask. Only used if using non-kernel attention implementation.
             shift_states (bool, optional): Whether to shift the hidden states for next-token prediction. Can save memory compared to shifting the logits later.
@@ -468,6 +474,7 @@ class LlamaForCausalLM(nn.Module):
         
         hidden_states = self.model(
             input_ids=input_ids,
+            inputs_embeds=inputs_embeds,
             attention_mask=attention_mask,
         )
 

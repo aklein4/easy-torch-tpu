@@ -48,7 +48,9 @@ At the base level are the model type, pretrained checkpoint loading options, and
 
 The remat section within the model config relates to things like activation checkpointing, layer scanning, and activation offloading.
 
-See [src/configs/model/remat/torchprime.yaml](../src/configs/model/remat/torchprime.yaml) for detailed information.
+Two remat configuration structures are supported:
+1. Default torchprime remat config structure. See [src/configs/model/remat/torchprime.yaml](../src/configs/model/remat/torchprime.yaml)
+2. Advanced remat config structure. See [src/configs/model/remat/vae.yaml](../src/configs/model/remat/vae.yaml) for an example and [src/utils/remat_utils.py](../src/utils/remat_utils.py) for details.
 
 ### sharding
 

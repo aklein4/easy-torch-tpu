@@ -62,3 +62,6 @@ attention_kernel: flash_attention
 # Note: This is not currently supported for PyTorch/XLA 2.8.0
 pure_modules: []
 # - LlamaMLP
+
+# You can add any additional configuration options for your model here
+# They will appear as attributes of config.model

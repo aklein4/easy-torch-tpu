@@ -1,0 +1,24 @@
+# advanced remat config structure
+# see src/utils/remat_utils.advanced_remat.py for more details
+
+advanced:
+
+ -  name: encoder_model
+    settings:
+        activation_checkpoint_layers:
+         - VAEEncoderLayer
+        optimization_barrier_layers:
+         - VAEEncoderLayer
+        scan_layers: layers
+        offload_tensors:
+         - encoder_input # these should not be the same between different components?
+
+ -  name: decoder_model.model
+    settings:
+        activation_checkpoint_layers:
+         - VAEDecoderLayer
+        optimization_barrier_layers:
+         - VAEDecoderLayer
+        scan_layers: layers
+        offload_tensors:
+         - decoder_input
