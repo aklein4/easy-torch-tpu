@@ -44,10 +44,12 @@ lr_scheduler:
   num_warmup_steps: 375
 
   # cosine scheduler requires this outside of kwargs
-  num_training_steps: 300000 # end of training unlike GPT-3 which decayed to 0 over 260B tokens
+  num_training_steps: 260000
 
   # kwargs passed to the scheduler constructor
-  kwargs: {}
+  kwargs:
+
+    min_lr_rate: 0.1
 
 
 # Defaults to clip the L2 norm of gradients to 1.0.
