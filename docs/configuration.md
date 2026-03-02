@@ -12,7 +12,7 @@ The default file at [src/configs/default.yaml](../src/configs/default.yaml) cont
 
 ## trainer
 
-These settings relate to the training setup, such as the global batch size and checkpoint interval.
+These settings relate to the training setup, such as the global batch size, the checkpoint interval, and whether to use mixed precision.
 
 This is also where custom trainer configurations should be set.
 

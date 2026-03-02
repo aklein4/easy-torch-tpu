@@ -428,7 +428,8 @@ class BaseTrainer:
     @torch_xla.compile(full_graph=True)
     def train_step(self, batch: dict) -> tuple[torch.Tensor, dict, torch.Tensor]:
         
-        loss, aux = self.forward(**batch)
+        with torch.autocast('xla', dtype=torch.bfloat16, enabled=self.config.trainer.use_autocast):
+            loss, aux = self.forward(**batch)
 
         loss.backward()
         

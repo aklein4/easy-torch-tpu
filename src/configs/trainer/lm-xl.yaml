@@ -15,6 +15,11 @@ max_steps: 300000
 checkpoint_interval: 10000
 
 
+# whether to autocast the forward pass and loss computation.
+# currently only supports autocasting to bfloat16
+use_autocast: true
+
+
 # optimizer configuration
 optimizer:
 
