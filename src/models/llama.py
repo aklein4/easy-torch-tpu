@@ -455,7 +455,7 @@ class LlamaForCausalLM(nn.Module):
     # @xp.trace_me("LlamaForCausalLM")
     def forward(
         self,
-        input_ids: torch.LongTensor,
+        input_ids: torch.LongTensor | None = None,
         inputs_embeds: torch.FloatTensor | None = None,
         labels: torch.LongTensor | None = None,
         attention_mask: torch.FloatTensor | None = None, # only used in non-kernel attention
@@ -463,7 +463,7 @@ class LlamaForCausalLM(nn.Module):
     ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
         """
         Args:
-            input_ids (torch.LongTensor): Indices of input sequence tokens in the vocabulary. Shape `(batch_size, sequence_length)`.
+            input_ids (torch.LongTensor | None): Indices of input sequence tokens in the vocabulary. Shape `(batch_size, sequence_length)`.
             inputs_embeds (torch.FloatTensor | None): Optionally, instead of passing `input_ids`, you can choose to directly pass an embedded
             labels (torch.LongTensor | None): Optional labels for computing the loss. Should be of shape `(batch_size, sequence_length)`. If `None`, loss will not be computed.
             attention_mask (torch.FloatTensor | None): Optional attention mask. Only used if using non-kernel attention implementation.
