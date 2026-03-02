@@ -2,22 +2,24 @@
 # vvvvvvvvvv Don't forget to change this for new experiments vvvvvvvvvv
 type: lm_trainer.LMTrainer  # Used to import the trainer from this class
 
+# This config approximates the hyperparameters of GPT-3 XL which had 1.3B parameters.
+# (assuming sequence lengths of 1024)
 
 # total batch size across all devices
-global_batch_size: 64
+global_batch_size: 1024
 
 # run for N steps
-max_steps: 1000000 
+max_steps: 300000
 
 # Save a checkpoint every N steps
-checkpoint_interval: 5000  
+checkpoint_interval: 10000
 
 
 # optimizer configuration
 optimizer:
 
   # Used to import the optimizer from this class.
-  type: adamw.AdamW
+  type: adamw.AdamW # GPT-3 actually used Adam
 
   # kwargs passed to the optimizer constructor
   kwargs:
@@ -26,11 +28,9 @@ optimizer:
 
     betas: [0.9, 0.95]
     
-    eps: 1e-6
+    eps: 1e-6 # GPT-3 used 1e-8
 
     weight_decay: 0.1
-
-    update_clip: null
 
 
 # Learning rate scheduler configuration
@@ -38,21 +38,17 @@ lr_scheduler:
 
   # name of the scheduler
   # see  https://huggingface.co/docs/transformers/main/en/main_classes/optimizer_schedules#transformers.get_scheduler
-  type: warmup_stable_decay
+  type: cosine_warmup_with_min_lr
 
   # get_scheduler requires this outside of kwargs
-  num_warmup_steps: 1000
+  num_warmup_steps: 375
 
   # kwargs passed to the scheduler constructor
   kwargs:
 
-    num_stable_steps: 1000000
-    num_decay_steps: 5000
-
-    min_lr_ratio: 0.0
-
-    warmup_type: linear
-    decay_type: linear
+    num_training_steps: 260000
+    
+    min_lr_rate: 0.1
   
 
 # Defaults to clip the L2 norm of gradients to 1.0.

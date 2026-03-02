@@ -108,20 +108,17 @@ model.layers.*[0]: [fsdp, null, null]
 
 Thanks to the SPMD feature in the PyTorch/XLA framework, you can flexibly
 implement multi-dimensional parallelism purely from configuration without
-modifying the modeling code. The examples in this guide demonstrates 1D FSDP
-but you may read on to [`llama-fsdp-tp.yaml`][llama-fsdp-tp] for combined
-FSDP + Tensor Parallelism (TP) 2D sharding. You may override the sharding from
+modifying the modeling code. You may override the sharding from
 the command line using Hydra config syntax or create new configuration files
 as needed.
 
 <!-- xrefs -->
 
 [spmd-guide]: https://pytorch.org/xla/master/perf/spmd_basic.html
-[llama]: ../torchprime/torch_xla_models/llama/model.py
-[llama-fsdp]: ../torchprime/torch_xla_models/configs/model/sharding/llama-fsdp.yaml
-[llama-fsdp-tp]: ../torchprime/torch_xla_models/configs/model/sharding/llama-fsdp-tp.yaml
-[shard-model]: ../torchprime/sharding/shard_model.py
-[trainer]: ../torchprime/torch_xla_models/train.py
+[llama]: ../src/models/llama.py
+[llama-fsdp]: ../src/configs/model/sharding/llama-fsdp.yaml
+[shard-model]: ../src/torchprime/sharding/shard_model.py
+[trainer]: ../src/trainers/base_trainer.py
 [fsdp]: https://pytorch.org/tutorials/intermediate/FSDP_tutorial.html
 [state-dict]: https://pytorch.org/tutorials/recipes/recipes/what_is_state_dict.html
 [partition-spec]: https://pytorch.org/xla/master/perf/spmd_basic.html#partition-spec
