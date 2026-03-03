@@ -515,9 +515,23 @@ class LlamaForCausalLM(nn.Module):
         logits: torch.FloatTensor,
         num_samples: int = 1,
     ):
-        
-        dist = torch.distributions.Categorical(
-            logits=logits
+        device_type = logits.device.type
+        device_type = (
+            device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
         )
+        with torch.autocast(device_type=device_type, enabled=False):
 
-        return dist.sample((num_samples,))
+            p = F.softmax(logits.float(), dim=-1)
+            cum_p = torch.cumsum(p, dim=-1)
+
+            coin = torch.rand(
+                num_samples, *logits.shape[:-1], device=logits.device, dtype=logits.dtype
+            )
+
+            samples = (cum_p >= coin[..., None]).long().sum(dim=-1) - 1
+
+            if num_samples == 1:
+                return samples.squeeze(0)
+
+            return samples
+    
