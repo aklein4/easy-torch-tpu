@@ -87,7 +87,7 @@ class NucTrainer(BaseTrainer):
         
         sample_ids = self.model.sample(logits, self.config.trainer.num_nuc_samples)
         
-        all_ids = torch.cat([input_ids[None], sample_ids], dim=0)
+        all_ids = torch.cat([input_ids[None, :, 1:], sample_ids], dim=0)
         energy = self.model.energy(
             hidden_states,
             all_ids,
@@ -112,17 +112,17 @@ class NucTrainer(BaseTrainer):
         nuc_loss = self.nuc_loss(
             input_energy,
             sample_energy,
-            pad_mask,
+            pad_mask[1:],
         )
         nuc_gain = self.nuc_gain(
             input_energy,
             sample_energy,
-            pad_mask,
+            pad_mask[1:],
         )
         nuc_acc = self.nuc_acc(
             input_energy,
             sample_energy,
-            pad_mask,
+            pad_mask[1:],
         )
 
         total_lm_loss = lm_loss - nuc_gain
