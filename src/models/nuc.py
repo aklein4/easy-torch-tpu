@@ -135,8 +135,6 @@ class NucModel(LlamaForCausalLM):
 
             if param not in params['head']:
                 params['main'].append(param)
-            else:
-                print("NOT adding parameter to main:", param.shape, flush=True)
 
         return params
 
