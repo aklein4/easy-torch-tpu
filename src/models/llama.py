@@ -517,13 +517,19 @@ class LlamaForCausalLM(nn.Module):
     ):
         import utils.sharding_utils as su
 
+        logits = logits.detach().float()
+
+        og_shape = logits.shape
+        logits = logits.view(-1, logits.shape[-1])
+        logits = su.maybe_shard_no_gradients(logits)
+
         samples = torch.multinomial(
-            logits.view(-1, logits.shape[-1]).softmax(dim=-1),
+            logits.softmax(dim=-1),
             num_samples,
             replacement=True
-        ).transpose(0, 1)
+        ).long().transpose(0, 1)
 
-        samples = samples.view(num_samples, *logits.shape[:-1])
+        samples = samples.view(num_samples, *og_shape[:-1])
 
         spec = su.batch_shard_spec(samples)
         spec = (spec[1], spec[0]) + spec[2:]
