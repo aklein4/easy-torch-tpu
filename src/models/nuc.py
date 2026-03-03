@@ -90,7 +90,6 @@ class NucHead(nn.Module):
         while sample_ids.dim() > hidden_states.dim() - 1:
             hidden_states = hidden_states.unsqueeze(0)
 
-        print(hidden_states.shape, sample_ids.shape, flush=True)
         hidden_states = (
             self.input_proj(self.input_norm(hidden_states)) +
             self.embed_samples(sample_ids)
