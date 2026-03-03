@@ -1,0 +1,62 @@
+defaults:
+  - _self_  # refers to this config file
+  - sharding: nuc-fsdp  # refers to sharding/llama-fsdp.yaml
+  - remat: nuc  # refers to remat/llama-scan.yaml
+
+
+# Used to import the model from this class
+# should contain the path within the model folder and the class name
+type: nuc.NucModel
+
+# This checkpoint was created using scripts/convert_hf_checkpoint.py
+pretrained_url: aklein4/TinyLlama_v1.1_TPU
+pretrained_step: 0
+pretrained_strict: false
+
+# dtype of the model parameters. Should probably be float32
+torch_dtype: float32
+
+# vocab information
+vocab_size: 32000
+bos_token_id: 1
+eos_token_id: 2
+pad_token_id: 32000 # not actually in the embeddings
+
+# architecture size
+hidden_size: 2048
+num_hidden_layers: 22
+
+# attention configuration
+num_attention_heads: 32
+num_key_value_heads: 4
+
+# MLP configuration
+intermediate_size: 5632
+hidden_act: silu
+
+# rope configuration
+max_position_embeddings: 2048
+rope_theta: 10000.0
+
+# initialization
+initializer_range: 0.02
+
+# misc
+attention_dropout: false
+attention_bias: false
+rms_norm_eps: 1.0e-05
+
+# choose attention_kernel from: [flash_attention, nan_safe_flash_attention, splash_attention, null]
+attention_kernel: flash_attention
+
+# Note: This is not currently supported for PyTorch/XLA 2.8.0
+pure_modules: []
+# - LlamaMLP
+
+# You can add any additional configuration options for your model here
+# They will appear as attributes of config.model
+
+head_mlp_size: 5632
+num_head_layers: 3
+
+head_output_proj_init_scale: 0.01

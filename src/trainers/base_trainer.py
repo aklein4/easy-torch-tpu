@@ -80,7 +80,7 @@ class BaseTrainer:
 
         self.model = self.prepare_model(model, config)
 
-        self.optimizer, self.lr_scheduler = self.prepare_optimization(self.model, config)
+        self.optimizers, self.lr_schedulers = self.prepare_optimization(self.model, config)
 
         # set up saving
         if not self.config.debug and constants.PROCESS_IS_MAIN():
@@ -165,6 +165,37 @@ class BaseTrainer:
 
         params = self.get_trainable_parameters(model)
 
+        if "multiple_optimizers" in config.trainers:
+
+            assert isinstance(params, dict)
+            assert len(params) == len(config.trainer.multiple_optimizers)
+
+            optimizers = {}
+            lr_schedulers = {}
+
+            for key, c in config.trainer.multiple_optimizers.items():
+                optimizer_config = c.optimizer
+                lr_scheduler_config = c.lr_scheduler
+
+                optimizers[key] = import_optimizer(optimizer_config.type)(
+                    params=params[key],
+                    **optimizer_config.kwargs,
+                )
+
+                lr_schedulers[key] = get_scheduler(
+                    name=lr_scheduler_config.type,
+                    optimizer=optimizers[key],
+                    num_warmup_steps=lr_scheduler_config.num_warmup_steps,
+                    num_training_steps=(
+                        lr_scheduler_config.num_training_steps if "num_training_steps" in lr_scheduler_config else None
+                    ),
+                    scheduler_specific_kwargs=lr_scheduler_config.kwargs,
+                )
+
+            return optimizers, lr_schedulers
+
+        assert not isinstance(params, dict)
+
         optimizer = import_optimizer(config.trainer.optimizer.type)(
             params=params,
             **config.trainer.optimizer.kwargs,
@@ -180,7 +211,7 @@ class BaseTrainer:
             scheduler_specific_kwargs=config.trainer.lr_scheduler.kwargs,
         )
 
-        return optimizer, lr_scheduler
+        return {"main": optimizer}, {"main": lr_scheduler}
     
 
     def _get_train_dataloader(self) -> pl.MpDeviceLoader:
@@ -343,7 +374,7 @@ class BaseTrainer:
 
             # perform the training step
             trace_start_time = timer()
-            loss, aux, grad_norm, lr = self.train_step(batch)
+            loss, aux, grad_norm = self.train_step(batch)
             trace_end_time = timer()
 
             # post-step closure for logging
@@ -381,7 +412,6 @@ class BaseTrainer:
                 to_wandb["loss"] = loss
                 to_wandb["grad_norm"] = grad_norm
                 to_wandb["trace_time_ms"] = (trace_end_time - trace_start_time) * 1000
-                to_wandb["lr"] = lr
                 to_wandb["epoch"] = epoch
 
                 to_wandb["examples_seen"] = (step + 1) * self.global_batch_size
@@ -409,7 +439,6 @@ class BaseTrainer:
                     {k: (v.detach().clone() if isinstance(v, torch.Tensor) else v) for k, v in aux.items()},
                     trace_start_time,
                     trace_end_time,
-                    lr,
                 ),
                 run_async=True,
             )
@@ -435,15 +464,23 @@ class BaseTrainer:
         
         grad_norm = self.clip_gradients()
 
-        opt_aux = self.optimizer.step()
-        if opt_aux is not None:
-            aux.update(opt_aux)
+        for key, optimizer in self.optimizers.items():
+
+            opt_aux = optimizer.step()
+            if opt_aux is not None:
+                aux.update(
+                    {f"{key}_{k}": v for k, v in opt_aux.items()}
+                )
+
+        for key, lr_scheduler in self.lr_schedulers.items():
+            
+            lr = self.lr_scheduler.get_last_lr()[0]
+            aux.update({f"{key}_lr": lr})
+            lr_scheduler.step()
+        
         self.model.zero_grad(set_to_none=False)
 
-        lr = self.lr_scheduler.get_last_lr()[0]
-        self.lr_scheduler.step()
-
-        return loss, aux, grad_norm, lr
+        return loss, aux, grad_norm
 
 
     def forward(self, **batch) -> tuple[torch.Tensor, dict]:
