@@ -533,5 +533,5 @@ class LlamaForCausalLM(nn.Module):
             if num_samples == 1:
                 return samples.squeeze(0)
 
-            return samples
+            return samples.detach()
     
