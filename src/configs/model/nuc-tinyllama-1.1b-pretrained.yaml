@@ -56,7 +56,5 @@ pure_modules: []
 # You can add any additional configuration options for your model here
 # They will appear as attributes of config.model
 
-head_mlp_size: 5632
 num_head_layers: 3
-
 head_output_proj_init_scale: 0.01

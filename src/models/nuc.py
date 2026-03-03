@@ -26,11 +26,7 @@ class HeadLayer(nn.Module):
             config.hidden_size, eps=config.rms_norm_eps,
         )
 
-        self.mlp = LlamaMLP(
-            hidden_size=config.hidden_size,
-            intermediate_size=config.head_mlp_size,
-            hidden_act=config.hidden_act,
-        )
+        self.mlp = LlamaMLP(config)
     
 
     def forward(
