@@ -515,7 +515,7 @@ class LlamaForCausalLM(nn.Module):
         logits: torch.FloatTensor,
         num_samples: int = 1,
     ):
-        import utils.sharding_utils as su
+        # import utils.sharding_utils as su
 
         device_type = logits.device.type
         device_type = (
@@ -532,11 +532,11 @@ class LlamaForCausalLM(nn.Module):
 
             samples = (cum_p >= coin[..., None]).long().sum(dim=-1) - 1
 
-            spec = su.batch_shard_spec(samples)
-            spec = (spec[1], spec[0]) + spec[2:]
-            samples = su.maybe_shard_with_gradients(
-                samples, spec=spec
-            )
+            # spec = su.batch_shard_spec(samples)
+            # spec = (spec[1], spec[0]) + spec[2:]
+            # samples = su.maybe_shard_with_gradients(
+            #     samples, spec=spec
+            # )
 
             if num_samples == 1:
                 return samples.squeeze(0)
