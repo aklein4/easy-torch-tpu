@@ -388,7 +388,7 @@ class BaseTrainer:
 
             # post-step closure for logging
             def step_closure(
-                start_time, epoch, step, loss, grad_norm, aux, trace_start_time, trace_end_time, lr
+                start_time, epoch, step, loss, grad_norm, aux, trace_start_time, trace_end_time
             ):
                 training_time_elapsed = (
                     timer() - start_time  
