@@ -6,6 +6,7 @@ defaults:
 # Weights
 
 head.input_norm.weight: [fsdp]
+head.input_proj.weight: [fsdp, null]
 head.embed_samples.weight: [null, fsdp]
 
 head.layers.*.norm.weight: [fsdp]

@@ -60,6 +60,7 @@ class NucHead(nn.Module):
         self.input_norm = LlamaRMSNorm(
             config.hidden_size, eps=config.rms_norm_eps,
         )
+        self.input_proj = nn.Linear(config.hidden_size, config.hidden_size, bias=False)
 
         self.embed_samples = nn.Embedding(config.vocab_size, config.hidden_size)
 
@@ -90,7 +91,7 @@ class NucHead(nn.Module):
             hidden_states = hidden_states.unsqueeze(0)
 
         hidden_states = (
-            self.input_norm(hidden_states) +
+            self.input_proj(self.input_norm(hidden_states)) +
             self.embed_samples(sample_ids)
         )
 
