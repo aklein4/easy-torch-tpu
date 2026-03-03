@@ -114,17 +114,17 @@ class NucTrainer(BaseTrainer):
         nuc_loss = self.nuc_loss(
             input_energy,
             sample_energy,
-            pad_mask[1:],
+            pad_mask[:, 1:],
         )
         nuc_gain = self.nuc_gain(
             input_energy,
             sample_energy,
-            pad_mask[1:],
+            pad_mask[:, 1:],
         )
         nuc_acc = self.nuc_acc(
             input_energy,
             sample_energy,
-            pad_mask[1:],
+            pad_mask[:, 1:],
         )
 
         total_lm_loss = lm_loss - nuc_gain
