@@ -29,7 +29,7 @@ class NucTrainer(BaseTrainer):
         )
         nuc_loss = nuc_loss.sum() / pad_mask.long().sum().float()
 
-        return inut_loss + sample_loss
+        return nuc_loss
 
     
     def nuc_gain(
