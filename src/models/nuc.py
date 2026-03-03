@@ -69,7 +69,7 @@ class NucHead(nn.Module):
 
         self.layers = HomogeneousSequential(
             *[
-                HeadLayer(config, layer_idx)
+                HeadLayer(config)
                 for layer_idx in range(config.num_head_layers)
             ]
         )
