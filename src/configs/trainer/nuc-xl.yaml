@@ -1,6 +1,6 @@
 
 # vvvvvvvvvv Don't forget to change this for new experiments vvvvvvvvvv
-type: lm_trainer.LMTrainer  # Used to import the trainer from this class
+type: nuc_trainer.NucTrainer  # Used to import the trainer from this class
 
 # This config is similar to the hyperparameters of GPT-3 XL which had 1.3B parameters.
 # (assuming sequence lengths of 1024)
