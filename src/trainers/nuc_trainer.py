@@ -85,7 +85,7 @@ class NucTrainer(BaseTrainer):
             return_states=True,
         )
         
-        sample_ids = self.model.sample(self.num_nuc_samples)
+        sample_ids = self.model.sample(self.config.trainer.num_nuc_samples)
         
         all_ids = torch.cat([input_ids[None], sample_ids], dim=0)
         energy = self.model.energy(
