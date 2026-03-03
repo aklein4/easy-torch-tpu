@@ -165,7 +165,7 @@ class BaseTrainer:
 
         params = self.get_trainable_parameters(model)
 
-        if "multiple_optimizers" in config.trainers:
+        if "multiple_optimizers" in config.trainer:
 
             assert isinstance(params, dict)
             assert len(params) == len(config.trainer.multiple_optimizers)
