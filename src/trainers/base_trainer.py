@@ -483,7 +483,7 @@ class BaseTrainer:
 
         for key, lr_scheduler in self.lr_schedulers.items():
             
-            lr = self.lr_scheduler.get_last_lr()[0]
+            lr = lr_scheduler.get_last_lr()[0]
             aux.update({f"{key}_lr": lr})
             lr_scheduler.step()
         
