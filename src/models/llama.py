@@ -517,28 +517,29 @@ class LlamaForCausalLM(nn.Module):
     ):
         import utils.sharding_utils as su
 
-        logits = logits.detach().float()
-
-        og_shape = logits.shape
-        logits = logits.view(-1, logits.shape[-1])
-        logits = su.maybe_shard_no_gradients(logits)
-
-        samples = torch.multinomial(
-            logits.softmax(dim=-1),
-            num_samples,
-            replacement=True
-        ).long().transpose(0, 1)
-
-        samples = samples.view(num_samples, *og_shape[:-1])
-
-        spec = su.batch_shard_spec(samples)
-        spec = (spec[1], spec[0]) + spec[2:]
-        samples = su.maybe_shard_no_gradients(
-            samples, spec=spec
+        device_type = logits.device.type
+        device_type = (
+            device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
         )
+        with torch.autocast(device_type=device_type, enabled=False):
 
-        if num_samples == 1:
-            return samples.squeeze(0)
+            p = F.softmax(logits.float(), dim=-1)
+            cum_p = torch.cumsum(p, dim=-1)
 
-        return samples
+            coin = torch.rand(
+                num_samples, *logits.shape[:-1], device=logits.device, dtype=logits.dtype
+            )
+
+            samples = (cum_p >= coin[..., None]).long().sum(dim=-1) - 1
+
+            spec = su.batch_shard_spec(samples)
+            spec = (spec[1], spec[0]) + spec[2:]
+            samples = su.maybe_shard_no_gradients(
+                samples, spec=spec
+            )
+
+            if num_samples == 1:
+                return samples.squeeze(0)
+
+            return samples
     
