@@ -153,6 +153,8 @@ class BaseTrainer:
 
 
     def get_trainable_parameters(self, model: torch.nn.Module):
+        if hasattr(model, "get_trainable_parameters"):
+            return model.get_trainable_parameters()
         return model.parameters()
 
 
