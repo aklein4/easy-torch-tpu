@@ -109,7 +109,7 @@ class NucHead(nn.Module):
 class NucModel(LlamaForCausalLM):
     
     def __init__(self, config: DictConfig):
-        LlamaForCausalLM.__init__(self)
+        LlamaForCausalLM.__init__(self, config)
 
         self.head = NucHead(config)
 
