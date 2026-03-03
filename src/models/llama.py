@@ -517,6 +517,8 @@ class LlamaForCausalLM(nn.Module):
     ):
         import utils.sharding_utils as su
 
+        logits = logits.detach().requires_grad_(False)
+
         device_type = logits.device.type
         device_type = (
             device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
