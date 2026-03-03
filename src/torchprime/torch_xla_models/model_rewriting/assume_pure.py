@@ -31,14 +31,14 @@ def mark_pure_modules(model: nn.Module, config: DictConfig) -> nn.Module:
     Transformed model.
   """
   pure_module_config = config.model.pure_modules
-  if pure_module_config:
-    torch_xla_version = torch_xla.version.__version__
-    if torch_xla_version.startswith("2.7"):
-      logger.warning("pure_modules is not supported for PyTorch/XLA 2.7.x")
-      return model
-    if torch_xla_version == "2.8.0":
-      logger.warning("pure_modules is not supported for PyTorch/XLA 2.8.0")
-      return model
+  # if pure_module_config:
+  #   torch_xla_version = torch_xla.version.__version__
+  #   if torch_xla_version.startswith("2.7"):
+  #     logger.warning("pure_modules is not supported for PyTorch/XLA 2.7.x")
+  #     return model
+  #   if torch_xla_version == "2.8.0":
+  #     logger.warning("pure_modules is not supported for PyTorch/XLA 2.8.0")
+  #     return model
 
   pure_module_classes = get_classes_by_names(model, pure_module_config)
 
@@ -47,4 +47,12 @@ def mark_pure_modules(model: nn.Module, config: DictConfig) -> nn.Module:
       return PureModule(mod)
     return mod
 
-  return wrap_module(model, transform)
+  out = wrap_module(model, transform)
+
+  num_pure = 0
+  for m in out.modules():
+    if isinstance(m, PureModule):
+      num_pure += 1
+  logger.info(f"Marked {num_pure} modules as pure.")
+
+  return out
