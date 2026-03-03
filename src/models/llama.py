@@ -515,5 +515,24 @@ class LlamaForCausalLM(nn.Module):
         logits: torch.FloatTensor,
         num_samples: int = 1,
     ):
-        return torch.multinomial(logits.softmax(dim=-1), num_samples)
+        import utils.sharding_utils as su
+
+        samples = torch.multinomial(
+            logits.view(-1, logits.shape[-1]).softmax(dim=-1),
+            num_samples,
+            replacement=True
+        ).transpose(0, 1)
+
+        samples = samples.view(num_samples, *logits.shape[:-1])
+
+        spec = su.batch_shard_spec(samples)
+        spec = (spec[1], spec[0]) + spec[2:]
+        samples = su.maybe_shard_no_gradients(
+            samples, spec=spec
+        )
+
+        if num_samples == 1:
+            return samples.squeeze(0)
+
+        return samples
     
