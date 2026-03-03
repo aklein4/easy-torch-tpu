@@ -536,7 +536,7 @@ class LlamaForCausalLM(nn.Module):
 
             spec = su.batch_shard_spec(samples)
             spec = (spec[1], spec[0]) + spec[2:]
-            samples = su.maybe_shard_no_gradients(
+            samples = su.maybe_shard_with_gradients(
                 samples, spec=spec
             )
 
