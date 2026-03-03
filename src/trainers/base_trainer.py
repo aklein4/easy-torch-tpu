@@ -311,8 +311,15 @@ class BaseTrainer:
         # prepare model for training
         for p in self.model.parameters():
             p.requires_grad_(False)
-        for p in self.get_trainable_parameters(self.model):
-            p.requires_grad_(True)
+        params = self.get_trainable_parameters(self.model)
+        if isinstance(params, dict):
+            for ps in params.values():
+                for p in ps:
+                    p.requires_grad_(True)
+        else:
+            for p in params:
+                p.requires_grad_(True)
+        
         self.model.train()
         self.model.zero_grad()
 
