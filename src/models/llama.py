@@ -335,7 +335,7 @@ class LlamaModel(nn.Module):
     """
 
     layer_type = LlamaDecoderLayer
-
+    do_norm = True
 
     def __init__(self, config: DictConfig):
         super().__init__()
@@ -360,6 +360,7 @@ class LlamaModel(nn.Module):
         self.rotary_emb = LlamaRotaryEmbedding(
             head_dim=head_dim, rope_theta=config.rope_theta, scaling=rope_scaling
         )
+    
 
     # @xp.trace_me("LlamaModel")
     def forward(
@@ -409,7 +410,9 @@ class LlamaModel(nn.Module):
             position_embeddings=position_embeddings,
         )
 
-        hidden_states = self.norm(hidden_states)
+        if self.do_norm:
+            hidden_states = self.norm(hidden_states)
+        
         return hidden_states
 
 
@@ -423,6 +426,7 @@ class LlamaForCausalLM(nn.Module):
 
         self.config = config
         self.model = self.transformer_type(config)
+        self.model.do_norm = False
 
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
@@ -460,6 +464,7 @@ class LlamaForCausalLM(nn.Module):
         labels: torch.LongTensor | None = None,
         attention_mask: torch.FloatTensor | None = None, # only used in non-kernel attention
         shift_states: bool = False,
+        return_states: bool = False,
     ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
         """
         Args:
@@ -468,8 +473,9 @@ class LlamaForCausalLM(nn.Module):
             labels (torch.LongTensor | None): Optional labels for computing the loss. Should be of shape `(batch_size, sequence_length)`. If `None`, loss will not be computed.
             attention_mask (torch.FloatTensor | None): Optional attention mask. Only used if using non-kernel attention implementation.
             shift_states (bool, optional): Whether to shift the hidden states for next-token prediction. Can save memory compared to shifting the logits later.
+            return_states (bool, optional): Whether to return the hidden states from the model in addition to the logits and loss. Defaults to `False`.
         Returns:
-            A tuple of `(logits, loss)`, where `logits` is unnormalized and of shape `(batch_size, sequence_length, vocab_size)` and `loss` is a scalar tensor if `labels` is provided, otherwise `None`.
+            A tuple of `(logits, loss)` or `(logits, loss, hidden_states)`
         """
         
         hidden_states = self.model(
@@ -478,24 +484,62 @@ class LlamaForCausalLM(nn.Module):
             attention_mask=attention_mask,
         )
 
+        lm_states = self.model.norm(hidden_states)
         if shift_states:
             # Shift the hidden states to the right for causal language modeling
-            hidden_states = hidden_states[..., :-1, :].contiguous()
+            lm_states = lm_states[..., :-1, :].contiguous()
 
-        logits = self.lm_head(hidden_states)
+        logits = self.lm_head(lm_states)
         logits = logits.to(torch.float32)
 
         # logits = torch.nn.functional.log_softmax(logits, dim=-1)
         
-        if labels is None:
-            return logits, None
+        loss = None
+        if labels is not None:
         
-        loss = lm_loss_fn(
-            logits,
-            labels=labels,
-            ignore_index=self.config.pad_token_id,
-            shift_logits=(not shift_states),
-        )
+            loss = lm_loss_fn(
+                logits,
+                labels=labels,
+                ignore_index=self.config.pad_token_id,
+                shift_logits=(not shift_states),
+            )
+
+        if return_states:
+            return logits, loss, hidden_states
         
         return logits, loss
+    
+
+    def sample(
+        self,
+        logits: torch.FloatTensor,
+        num_samples: int = 1,
+    ):
+        # import utils.sharding_utils as su
+
+        device_type = logits.device.type
+        device_type = (
+            device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
+        )
+        with torch.autocast(device_type=device_type, enabled=False):
+
+            p = F.softmax(logits.float(), dim=-1)
+            cum_p = torch.cumsum(p, dim=-1)
+
+            coin = torch.rand(
+                num_samples, *logits.shape[:-1], device=logits.device, dtype=logits.dtype
+            )
+
+            samples = (cum_p >= coin[..., None]).long().sum(dim=-1) - 1
+
+            # spec = su.batch_shard_spec(samples)
+            # spec = (spec[1], spec[0]) + spec[2:]
+            # samples = su.maybe_shard_with_gradients(
+            #     samples, spec=spec
+            # )
+
+            if num_samples == 1:
+                return samples.squeeze(0)
+
+            return samples
     
