@@ -18,14 +18,16 @@ class NucTrainer(BaseTrainer):
     ) -> torch.FloatTensor:
         
         inut_loss = -input_energy.mean()
-
         sample_loss = sample_energy.exp().mean(0)
-        sample_loss = torch.where(
+
+        nuc_loss = inut_loss + sample_loss
+
+        nuc_loss = torch.where(
             pad_mask,
-            sample_loss,
-            torch.zeros_like(sample_loss)
+            nuc_loss,
+            torch.zeros_like(nuc_loss)
         )
-        sample_loss = sample_loss.sum() / pad_mask.long().sum().float()
+        nuc_loss = nuc_loss.sum() / pad_mask.long().sum().float()
 
         return inut_loss + sample_loss
 
