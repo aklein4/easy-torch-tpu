@@ -78,6 +78,7 @@ class AdamW(Optimizer):
         grad_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
         update_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
         param_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
+        post_param_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
         for group in self.param_groups:
             for p in group["params"]:
                 
@@ -95,7 +96,7 @@ class AdamW(Optimizer):
                 if group["fix_nan"]:
                     grad = safe_finite(grad)
 
-                og_p = p.clone()
+                param_nan = param_nan | (~torch.isfinite(p)).any()
 
                 state = self.state[p]
                 state_dtype = group["state_dtype"]
@@ -126,9 +127,6 @@ class AdamW(Optimizer):
                     grad.pow(2).to(exp_avg_sq.dtype),
                     alpha=1.0 - beta2
                 )
-                exp_avg_sq.clamp_(min=group["eps"]**2)
-
-                denom = exp_avg_sq.to(p.dtype).sqrt()
 
                 step_size = group["lr"]
                 if group["correct_bias"]:  # No bias correction for Bert
@@ -136,6 +134,9 @@ class AdamW(Optimizer):
                     bias_correction2 = 1.0 - beta2 ** state["step"]
                     step_size = step_size * math.sqrt(bias_correction2) / bias_correction1
 
+                denom = torch.clamp(
+                    exp_avg_sq.to(p.dtype), min=group["eps"]**2
+                ).sqrt()
                 update = exp_avg.to(p.dtype) / denom
                 if group["update_clip"] is not None:
                     update = torch.clamp(update, -group["update_clip"], group["update_clip"])
@@ -149,13 +150,12 @@ class AdamW(Optimizer):
 
                 p.add_(update, alpha=-step_size)
 
-                param_nan = param_nan | (~torch.isfinite(p)).any()
-                if group["fix_nan"]:
-                    p.copy_(torch.where(torch.isfinite(p), p.clone(), og_p))
+                post_param_nan = post_param_nan | (~torch.isfinite(p)).any()
 
         return {
             "grad_nan": grad_nan.long(),
             "update_nan": update_nan.long(),
             "param_nan": param_nan.long(),
+            "post_param_nan": post_param_nan.long()
         }
     
