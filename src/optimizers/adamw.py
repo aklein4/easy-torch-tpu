@@ -30,7 +30,7 @@ class AdamW(Optimizer):
             If a float value is provided, the update is clipped to the range :obj:`[-update_clip, update_clip]`.
         fix_nan (:obj:`bool`, `optional`, defaults to `True`):
             Whether to fix NaN values in gradients and updates by replacing them with zeros.
-        state_dtype (:obj:`torch.dtype`, `optional`, defaults to "bfloat16"):
+        state_dtype (:obj:`torch.dtype`, `optional`, defaults to "float32"):
             The data type to use for the optimizer state (e.g., "float32", "bfloat16", "float16").
     """
 
@@ -44,7 +44,7 @@ class AdamW(Optimizer):
         correct_bias: bool = True,
         update_clip: float = None,
         fix_nan: bool = True,
-        state_dtype: torch.dtype = "bfloat16",
+        state_dtype: torch.dtype = "float32",
     ):
         if lr < 0.0:
             raise ValueError("Invalid learning rate: {} - should be >= 0.0".format(lr))
