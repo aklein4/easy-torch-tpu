@@ -5,6 +5,8 @@ from torch.optim import Optimizer
 
 import math
 
+from utils.torch_utils import safe_finite
+
 
 class AdamW(Optimizer):
     """
@@ -75,6 +77,7 @@ class AdamW(Optimizer):
 
         grad_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
         update_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
+        param_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
         for group in self.param_groups:
             for p in group["params"]:
                 
@@ -90,7 +93,9 @@ class AdamW(Optimizer):
                 # handle nan gradients
                 grad_nan = grad_nan | (~torch.isfinite(grad)).any()
                 if group["fix_nan"]:
-                    grad = torch.nan_to_num(grad, nan=0.0, posinf=0.0, neginf=0.0)
+                    grad = safe_finite(grad)
+
+                og_p = p.clone()
 
                 state = self.state[p]
                 state_dtype = group["state_dtype"]
@@ -137,22 +142,20 @@ class AdamW(Optimizer):
 
                 update_nan = update_nan | (~torch.isfinite(update)).any()
                 if group["fix_nan"]:
-                    update = torch.nan_to_num(update, nan=0.0, posinf=0.0, neginf=0.0)
+                    update = safe_finite(update)
+
+                if group["weight_decay"] > 0.0:
+                    p.add_(p, alpha=-group["lr"] * group["weight_decay"])
 
                 p.add_(update, alpha=-step_size)
 
-                # Just adding the square of the weights to the loss function is *not*
-                # the correct way of using L2 regularization/weight decay with Adam,
-                # since that will interact with the m and v parameters in strange ways.
-                #
-                # Instead we want to decay the weights in a manner that doesn't interact
-                # with the m/v parameters. This is equivalent to adding the square
-                # of the weights to the loss with plain (non-momentum) SGD.
-                # Add weight decay at the end (fixed version)
-                if group["weight_decay"] > 0.0:
-                    p.add_(p, alpha=-group["lr"] * group["weight_decay"])
+                param_nan = param_nan | (~torch.isfinite(p)).any()
+                if group["fix_nan"]:
+                    p.copy_(torch.where(torch.isfinite(p), p.clone(), og_p))
 
         return {
             "grad_nan": grad_nan.long(),
             "update_nan": update_nan.long(),
+            "param_nan": param_nan.long(),
         }
+    

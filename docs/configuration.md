@@ -9,6 +9,7 @@ Examples and exhaustive configuration options can be found in the [src/configs/]
 
 The default file at [src/configs/default.yaml](../src/configs/default.yaml) contains the highest level configuration options, such as the random seed, dtype settings, distributed mesh configuration, and wandb logging information.
 
+Depending on the size of your TPU cluster, you should probably update the `ici_mesh.fsdp` option to match the number of devices.
 
 ## trainer
 

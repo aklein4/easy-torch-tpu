@@ -7,9 +7,9 @@
 </div>
 <br /><br />
 
-This repo is based on [torchprime](https://github.com/AI-Hypercomputer/torchprime) and integrated with [Weights & Biases](https://wandb.ai) and [Hugging Face](https://huggingface.co). It is designed to be a flexible framework for training custom research-scale models on Google Cloud TPUs using [PyTorch/XLA](https://github.com/pytorch/xla).
+This repo is based on [torchprime](https://github.com/AI-Hypercomputer/torchprime) and integrated with [Weights & Biases](https://wandb.ai) and [Hugging Face](https://huggingface.co). It is designed to be a flexible pipeline for training custom research-scale models on Google Cloud TPUs using [PyTorch/XLA](https://github.com/pytorch/xla).
 
-This framework prioritizes:
+This pipeline prioritizes:
 - Flexibility
 - Customizability
 - Simplicity
@@ -18,7 +18,7 @@ This framework prioritizes:
 
 ## Features
 
-Without touching the base framework, easy-torch-tpu allows you to:
+Without touching the base pipeline, easy-torch-tpu allows you to:
 
 1. Define custom train step functions (optionally including parameter update logic).
 2. Implement new nn.Module-based models.

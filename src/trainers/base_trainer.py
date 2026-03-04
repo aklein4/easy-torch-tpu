@@ -473,18 +473,20 @@ class BaseTrainer:
         
         grad_norm = self.clip_gradients()
 
+        key_name = lambda key, x: f"{key}_{x}" if len(self.optimizers) > 1 else x
+
         for key, optimizer in self.optimizers.items():
 
             opt_aux = optimizer.step()
             if opt_aux is not None:
                 aux.update(
-                    {f"{key}_{k}": v for k, v in opt_aux.items()}
+                    {key_name(key, k): v for k, v in opt_aux.items()}
                 )
 
         for key, lr_scheduler in self.lr_schedulers.items():
             
             lr = lr_scheduler.get_last_lr()[0]
-            aux.update({f"{key}_lr": lr})
+            aux.update({key_name(key, "lr"): lr})
             lr_scheduler.step()
         
         self.model.zero_grad(set_to_none=False)

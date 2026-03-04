@@ -10,6 +10,15 @@ class LMTrainer(BaseTrainer):
     model: LlamaForCausalLM
 
 
+    def post_init(self):
+        self.model.model.embed_tokens.weight.no_muon = True
+        try:
+            self.model.lm_head.weight.no_muon = True
+        except:
+            # ShardedModule
+            self.model.lm_head._orig_mod.weight.no_muon = True
+
+
     def forward(self, input_ids):
 
         # this hack gets around some models not having a pad token id in their embeddings

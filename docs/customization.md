@@ -34,7 +34,7 @@ Custom optimizers can be created in the [src/optimizers/](../src/optimizers/) us
 
 Your optimizer must implement a `step` function, which can return a dictionary of single-element tensors and/or other objects to be logged.
 
-See [optimizers/adamw.py](./src/optimizers/adamw.py) for an example.
+See [optimizers/adamw.py](./src/optimizers/adamw.py) and [optimizers/muon.py](./src/optimizers/muon.py)  for examples.
 
 
 ### Collators
