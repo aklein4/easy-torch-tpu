@@ -466,10 +466,7 @@ class BaseTrainer:
     @torch_xla.compile(full_graph=True)
     def train_step(self, batch: dict) -> tuple[torch.Tensor, dict, torch.Tensor]:
         
-        with torch.autocast('xla', dtype=torch.bfloat16, enabled=self.config.trainer.use_autocast):
-            loss, aux = self.forward(**batch)
-
-        loss.backward()
+        loss, aux = self.inner_train_step(**batch)
         
         grad_norm = self.clip_gradients()
 
@@ -492,6 +489,16 @@ class BaseTrainer:
         self.model.zero_grad(set_to_none=False)
 
         return loss, aux, grad_norm
+
+
+    def inner_train_step(self, **batch) -> tuple[torch.Tensor, dict]:
+        
+        with torch.autocast('xla', dtype=torch.bfloat16, enabled=self.config.trainer.use_autocast):
+            loss, aux = self.forward(**batch)
+        
+        loss.backward()
+
+        return loss, aux
 
 
     def forward(self, **batch) -> tuple[torch.Tensor, dict]:
